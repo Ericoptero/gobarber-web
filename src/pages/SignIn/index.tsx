@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useContext } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { FiLogIn, FiLock, FiMail } from 'react-icons/fi';
 import * as Yup from 'yup';
 import { FormHandles } from '@unform/core';
@@ -9,37 +9,54 @@ import logoImg from '../../assets/logo.svg';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 
-import AuthContext from '../../context/AuthContext';
+import { useAuth } from '../../hooks/AuthContext';
 
 import getValidationErrors from '../../utils/getValidationErrors';
 
 import { Container, Content, Background } from './styles';
 
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
 const SignIn: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
 
-  const auth = useContext(AuthContext);
+  const { signIn } = useAuth();
 
-  console.log(auth);
+  const handleSubmit = useCallback(
+    async (data: SignInFormData) => {
+      formRef.current?.setErrors({});
 
-  const handleSubmit = useCallback(async (data: object) => {
-    formRef.current?.setErrors({});
+      try {
+        const schema = Yup.object().shape({
+          email: Yup.string()
+            .required('O campo de email é obrigatório')
+            .email('Digite um e-mail válido'),
+          password: Yup.string().required('O campo de senha é obrigatório'),
+        });
 
-    try {
-      const schema = Yup.object().shape({
-        email: Yup.string()
-          .required('O campo de email é obrigatório')
-          .email('Digite um e-mail válido'),
-        password: Yup.string().required('O campo de senha é obrigatório'),
+        await schema.validate(data, {
+          abortEarly: false,
+        });
+      } catch (err) {
+        if (err instanceof Yup.ValidationError) {
+          const errors = getValidationErrors(err);
+
+          formRef.current?.setErrors(errors);
+        }
+
+        // Mensagens de toast
+      }
+
+      signIn({
+        email: data.email,
+        password: data.password,
       });
-
-      await schema.validate(data, {
-        abortEarly: false,
-      });
-    } catch (err) {
-      formRef.current?.setErrors(getValidationErrors(err));
-    }
-  }, []);
+    },
+    [signIn],
+  );
 
   return (
     <Container>
